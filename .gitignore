@@ -1,0 +1,12 @@
+# filetypes
+*.asv
+*.pyc
+*.mexa64
+*.caffemodel
+*~
+*.so
+*.o
+*.log
+
+# folders
+__pycache__
