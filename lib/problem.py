@@ -22,8 +22,8 @@ class FON(Problem):
 
     def _evaluate(self, x, out, *args, **kwargs):
         # Objective Functions
-        obj1     = 1 - np.exp( - np.sum( (x - np.sqrt(1/self.n_var) )**2 ), axis= 1)
-        obj2     = 1 - np.exp( - np.sum( (x + np.sqrt(1/self.n_var) )**2 ), axis= 1)
+        obj1     = 1 - np.exp( - np.sum( (x - np.sqrt(1/self.n_var) )**2, axis= 1))
+        obj2     = 1 - np.exp( - np.sum( (x + np.sqrt(1/self.n_var) )**2, axis= 1))
         out["F"] = np.column_stack([obj1, obj2])
 
         # Constraints
