@@ -38,6 +38,8 @@ def run_nsga_one_step(problem, pop_size, do_init= False, init_solution= None):
         # print("Running for seed {:2d}".format(i))
 
         if do_init:
+            # Reference
+            # https://pymoo.org/customization/initialization.html?highlight=population%20nsga2
             if init_solution.ndim == 3:
                 init_data_curr = init_solution[i]
             elif init_solution.ndim == 2:
