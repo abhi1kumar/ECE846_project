@@ -2,12 +2,18 @@ import os, sys
 sys.path.append(os.getcwd())
 
 import numpy as np
+import scipy.io as sio
 from scipy.spatial import distance
 
 def read_dat(file_path):
     with open(file_path) as f:
         data_str = [line.strip("\n").split("\t") for line in f]
     return np.array(data_str).astype(np.float)
+
+def read_mat(file_path):
+    mat_contents = sio.loadmat(file_path)
+
+    return mat_contents
 
 
 def get_non_dominated_points(data, verbose= False):
