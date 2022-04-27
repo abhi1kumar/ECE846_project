@@ -1,7 +1,7 @@
 function x_init_matrix = FON(num_init, N, d, options)
 
     % Create weight matrix
-    weight_matrix = zeros(num_init, d);
+    weight_matrix = zeros(num_init, 2);
     delta = 1.0/(num_init-1);
     for k = 1:num_init
         weight_matrix(k,:) = [(k-1)*delta, 1.0 - (k-1)*delta];
