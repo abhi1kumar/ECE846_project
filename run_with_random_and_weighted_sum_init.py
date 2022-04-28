@@ -58,11 +58,13 @@ def run_nsga_one_step(problem, pop_size, do_init= False, init_solution= None):
             algorithm= NSGA2(pop_size = pop_size,
                           crossover= SimulatedBinaryCrossover(eta= eta_c, prob= p_c),
                           mutation = PolynomialMutation      (eta= eta_m, prob= p_m),
+                          eliminate_duplicates=True,
                           sampling = init_data_curr)
         else:
             algorithm= NSGA2(pop_size = pop_size,
                           crossover= SimulatedBinaryCrossover(eta= eta_c, prob= p_c),
-                          mutation = PolynomialMutation      (eta= eta_m, prob= p_m))
+                          mutation = PolynomialMutation      (eta= eta_m, prob= p_m),
+                          eliminate_duplicates=True)
 
         res     = minimize(problem,
                            algorithm,
