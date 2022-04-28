@@ -11,20 +11,21 @@ def read_dat(file_path):
     return np.array(data_str).astype(np.float)
 
 def read_mat(file_path):
+    print("Loading {}".format(file_path))
     mat_contents = sio.loadmat(file_path)
 
     return mat_contents
 
 
-def get_non_dominated_points(data, verbose= False):
+def get_non_dominated_points(func_data, x_data, verbose= False):
     if verbose:
         print("\nRemoving non-dominated points...")
-        print("Before removal shape", data.shape)
+        print("Before removal shape", func_data.shape)
 
-    N, D = data.shape
+    N, D = func_data.shape
     dom_index = []
     for i in range(N):
-        temp_diff = data - data[i]
+        temp_diff = func_data - func_data[i]
         # Find how many of them are negative
         temp_indicator     = np.sign(temp_diff)
         temp_indicator_sum = np.sum (temp_indicator, axis= 1).astype(int)
@@ -45,9 +46,9 @@ def get_non_dominated_points(data, verbose= False):
     good_index = np.setdiff1d(np.arange(N), dom_index)
 
     if verbose:
-        print("After removal shape", data[good_index].shape)
+        print("After removal shape", func_data[good_index].shape)
 
-    return data[good_index]
+    return func_data[good_index], x_data[good_index]
 
 def get_closest_index(data, K, INF= np.inf):
     dist_matrix = distance.cdist(data, data, 'euclidean')

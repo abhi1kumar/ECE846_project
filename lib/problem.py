@@ -16,14 +16,14 @@ class FON(Problem):
         super().__init__(n_var= self.n_var,
                          n_obj= 2,
                          n_constr= 0,
-                         xl= -100 * np.ones((self.n_var, )),
-                         xu=  100 * np.ones((self.n_var, ))
+                         xl= -1 * np.ones((self.n_var, )),
+                         xu=  1 * np.ones((self.n_var, ))
                          )
 
     def _evaluate(self, x, out, *args, **kwargs):
         # Objective Functions
-        obj1     = 1 - np.exp( - np.sum( (x - np.sqrt(1/self.n_var) )**2, axis= 1))
-        obj2     = 1 - np.exp( - np.sum( (x + np.sqrt(1/self.n_var) )**2, axis= 1))
+        obj1     = 1 - np.exp( - np.sum( (x - np.sqrt(1.0/self.n_var) )**2, axis= 1))
+        obj2     = 1 - np.exp( - np.sum( (x + np.sqrt(1.0/self.n_var) )**2, axis= 1))
         out["F"] = np.column_stack([obj1, obj2])
 
         # Constraints
