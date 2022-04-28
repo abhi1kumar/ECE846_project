@@ -24,7 +24,7 @@ from pymoo.config import Config
 Config.show_compile_hint = False
 
 from lib.problem import FON
-from lib.util import get_non_dominated_points, read_mat, list_to_append_array
+from lib.util import get_non_dominated_points, read_mat, list_to_append_array, save_numpy
 from plot.common_operations import *
 import plot.plotting_params as params
 
@@ -56,7 +56,7 @@ class MyCallback(Callback):
         self.data["F"].append(algorithm.pop.get("F"))
         self.data["X"].append(algorithm.pop.get("X"))
 
-def run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= False, init_solution= None, edgecolor= color1, save_gif= True, gif_path= None):
+def run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= False, init_solution= None, edgecolor= color1, save_gif= True, gif_path= None, np_path= None):
     hv  = get_performance_indicator("hv", ref_point=np.array([1.2, 1.2]))
     igd = get_performance_indicator("igd", pareto_X)
     pareto_F = problem.evaluate(pareto_X)
@@ -92,6 +92,7 @@ def run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= False, ini
     if save_gif:
         gif_writer = open_gif_writer(gif_path)
 
+    np_data = np.zeros((num_gen, 3))
     for i in range(num_gen):
         func_all_seed = []
         sol_all_seed  = []
@@ -109,6 +110,7 @@ def run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= False, ini
         hv_val  = hv.do(func_non_dominated)
         igd_val = igd.do(sol_non_dominated)
         print("Gen= {:2d} HV= {:.2f} IGD= {:.2f}".format(i+1, hv_val, igd_val))
+        np_data[i] = np.array([i+1, hv_val, igd_val])
 
         if save_gif:
             if i % 1 == 0 or i == num_gen-1:
@@ -126,8 +128,9 @@ def run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= False, ini
                 add_ubyte_image_to_gif_writer(gif_writer, convert_fig_to_ubyte_image(fig))
                 plt.close()
 
-    close_gif_writer(gif_writer)
-
+    if save_gif:
+        close_gif_writer(gif_writer)
+    save_numpy(path= np_path, numpy_variable= np_data)
 
 # ==================================================================================================
 # Main Starts here
@@ -203,8 +206,10 @@ if pop_size < num_init_sol:
 
 # Run without initialization
 gif_path = os.path.join("images", problem_name + "_" + str(dim) + "_random.gif")
-run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= False, init_solution= None, edgecolor= color2, save_gif= save_gif, gif_path= gif_path)
+np_path  = os.path.join("output", problem_name + "_" + str(dim) + "_random.npy")
+run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= False, init_solution= None, edgecolor= color2, save_gif= save_gif, gif_path= gif_path, np_path= np_path)
 
 # Run with initialization
 gif_path = os.path.join("images", problem_name + "_" + str(dim) + "_weighted_sum.gif")
-run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= True, init_solution= init_solution, edgecolor= color1, save_gif= save_gif, gif_path= gif_path)
+np_path  = os.path.join("output", problem_name + "_" + str(dim) + "_weighted_sum.npy")
+run_nsga_num_steps(problem, pareto_X, pop_size, num_gen, do_init= True, init_solution= init_solution, edgecolor= color1, save_gif= save_gif, gif_path= gif_path, np_path= np_path)

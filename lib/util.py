@@ -16,6 +16,24 @@ def read_mat(file_path):
 
     return mat_contents
 
+def read_numpy(path, folder= None, show_message= True):
+    if folder is not None:
+        path = os.path.join(folder, path)
+
+    if show_message:
+        print("=> Reading {}".format(path))
+
+    return np.load(path)
+
+def save_numpy(path, numpy_variable, save_folder= None, show_message= True):
+
+    if save_folder is not None:
+        path = os.path.join(save_folder, path)
+
+    if show_message:
+        print("=> Saving to {}".format(path))
+    np.save(path, numpy_variable)
+
 def list_to_append_array(mylist):
     num_times = len(mylist)
     appended_arr = mylist[0]
