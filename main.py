@@ -32,6 +32,14 @@ p_m      = 0.167
 edgecolor= params.color_set1_pink/255.0
 ms       = 20
 
+def list_to_append_array(mylist):
+    num_times = len(mylist)
+    appended_arr = mylist[0]
+    for i in range(1, num_times):
+        appended_arr = np.vstack((appended_arr, mylist[i]))
+
+    return appended_arr
+
 def run_nsga_one_step(problem, pop_size, do_init= False, init_solution= None):
 
     for i in range(num_times):
@@ -40,10 +48,10 @@ def run_nsga_one_step(problem, pop_size, do_init= False, init_solution= None):
         if do_init:
             # Reference
             # https://pymoo.org/customization/initialization.html?highlight=population%20nsga2
-            if init_solution.ndim == 3:
-                init_data_curr = init_solution[i]
-            elif init_solution.ndim == 2:
+            if type(init_solution) == np.ndarray and init_solution.ndim == 2:
                 init_data_curr = init_solution
+            elif isinstance(init_solution, list):
+                init_data_curr = init_solution[i]
             else:
                 raise NotImplementedError
 
@@ -62,16 +70,23 @@ def run_nsga_one_step(problem, pop_size, do_init= False, init_solution= None):
                            seed= i,
                            verbose= False)
 
-        sol = res.F
+        func = res.F
+        sol  = res.X
+
         # Combine all sets of solutions
         if i == 0:
-            sol_all_seed = np.zeros((num_times, sol.shape[0], sol.shape[1]))
-        sol_all_seed[i] = sol
+            func_all_seed = []#np.zeros((num_times, func.shape[0], func.shape[1]))
+            sol_all_seed  = []#np.zeros((num_times, sol.shape[0], sol.shape[1]))
+        func_all_seed.append(func)
+        sol_all_seed.append(sol)
 
-    # Check non-dominated points
-    sol_non_dominated = get_non_dominated_points(sol_all_seed.reshape(-1, sol.shape[1]), verbose= False)
+    func_all_seed_appended = list_to_append_array(func_all_seed)
+    sol_all_seed_appended  = list_to_append_array(sol_all_seed)
 
-    return sol_all_seed, sol_non_dominated
+    # Get non-dominated points
+    func_non_dominated, sol_non_dominated = get_non_dominated_points(func_all_seed_appended, sol_all_seed_appended, verbose= False)
+
+    return func_all_seed, sol_all_seed, func_non_dominated, sol_non_dominated
 
 
 def run_nsga_num_steps(problem, pareto_solution, pop_size, num_gen, do_init= False, init_solution= None):
@@ -86,13 +101,13 @@ def run_nsga_num_steps(problem, pareto_solution, pop_size, num_gen, do_init= Fal
             else:
                 print("\nNSGA2 with random initialization...")
 
-            sol_all_seed, sol_non_dominated = run_nsga_one_step(problem, pop_size, do_init= do_init, init_solution= init_solution)
+            func_all_seed, sol_all_seed, func_non_dominated, sol_non_dominated = run_nsga_one_step(problem, pop_size, do_init= do_init, init_solution= init_solution)
         else:
-            sol_all_seed, sol_non_dominated = run_nsga_one_step(problem, pop_size, do_init= do_init, init_solution= sol_all_seed)
+            func_all_seed, sol_all_seed, func_non_dominated, sol_non_dominated = run_nsga_one_step(problem, pop_size, do_init= do_init, init_solution= sol_all_seed)
 
         # Print some statistics
-        hv_val  = igd.do(sol_non_dominated)
-        igd_val = hv.do(sol_non_dominated)
+        hv_val  = hv.do(func_non_dominated)
+        igd_val = igd.do(sol_non_dominated)
         print("Gen= {:2d} HV= {:.2f} IGD= {:.2f}".format(j+1, hv_val, igd_val))
 
         non_dominated_all_step.append(sol_non_dominated)
@@ -120,11 +135,13 @@ num_times= args.num_times
 pop_size = args.pop_size
 
 # Print the arguments
+print("==================================")
 print("Problem  = {}".format(problem_name))
 print("Dim      = {}".format(dim))
 print("Num_gen  = {}".format(num_gen))
 print("Num times= {}".format(num_times))
 print("Pop size = {}".format(pop_size))
+print("==================================\n")
 
 # Start executing main
 if problem_name == "zdt4":
@@ -132,10 +149,13 @@ if problem_name == "zdt4":
     pareto_solution  = problem.pareto_front()
 
 elif problem_name == "FON":
-    problem  = FON()
+    problem  = FON(n_var= dim)
     init_solution   = read_mat("matlab/FON_" + str(dim) + '.mat')['x_init_matrix']
     temp = np.arange(-1.0/math.sqrt(dim), 1.0/math.sqrt(dim), 0.01)
     pareto_solution = np.repeat(temp[:, np.newaxis], dim, axis=1)
+
+print(init_solution.shape)
+print(pareto_solution.shape)
 
 num_init_sol = init_solution.shape[0]
 if pop_size < num_init_sol:
