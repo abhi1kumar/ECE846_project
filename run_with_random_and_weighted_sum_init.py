@@ -6,9 +6,9 @@ import numpy as np
 import copy
 import math
 
-from pymoo.core.problem import Problem
-from pymoo.factory import get_problem, get_performance_indicator
+from pymoo.factory import get_performance_indicator
 from pymoo.optimize import minimize
+from pymoo.problems.multi import ZDT4
 
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.operators.crossover.sbx import SimulatedBinaryCrossover
@@ -146,9 +146,12 @@ print("Pop size = {}".format(pop_size))
 print("==================================\n")
 
 # Start executing main
-if problem_name == "zdt4":
-    problem  = get_problem("zdt4")
-    pareto_solution  = problem.pareto_front()
+if problem_name == "ZDT4":
+    problem  = ZDT4(n_var= dim)
+    init_solution   = read_mat("matlab/ZDT4_" + str(dim) + '.mat')['x_init_matrix']
+    temp     = np.arange(0, 1, 0.01)
+    pareto_solution       = np.zeros((temp.shape[0], dim))
+    pareto_solution[:, 0] = temp
 
 elif problem_name == "FON":
     problem  = FON(n_var= dim)
