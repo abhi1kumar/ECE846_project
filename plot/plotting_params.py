@@ -7,6 +7,8 @@
     Version 1 2020-05-25 Abhinav Kumar
 """
 import matplotlib
+import tkinter
+matplotlib.use('Qt5Agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
