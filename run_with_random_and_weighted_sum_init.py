@@ -5,24 +5,27 @@ import argparse
 import numpy as np
 import copy
 import math
+from matplotlib import pyplot as plt
 
 from pymoo.factory import get_performance_indicator
 from pymoo.optimize import minimize
-from pymoo.problems.multi import ZDT4
+from pymoo.problems.multi import ZDT1, ZDT4
 
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.operators.crossover.sbx import SimulatedBinaryCrossover
 from pymoo.operators.mutation.pm import PolynomialMutation
 
+from pymoo.core.callback import Callback
 from pymoo.util.plotting import plot
 from pymoo.visualization.scatter import Scatter
 
-from lib.problem import FON
-from lib.util import get_non_dominated_points, read_mat
-import plot.plotting_params as params
-
+# Suppress warnings
 from pymoo.config import Config
 Config.show_compile_hint = False
+
+from lib.problem import FON
+from lib.util import get_non_dominated_points, read_mat, list_to_append_array
+import plot.plotting_params as params
 
 eta_c    = 10
 eta_m    = 20
@@ -32,87 +35,74 @@ p_m      = 0.167
 edgecolor= params.color_set1_pink/255.0
 ms       = 20
 
-def list_to_append_array(mylist):
-    num_times = len(mylist)
-    appended_arr = mylist[0]
-    for i in range(1, num_times):
-        appended_arr = np.vstack((appended_arr, mylist[i]))
+class MyCallback(Callback):
 
-    return appended_arr
+    # Reference
+    # https://pymoo.org/interface/callback.html?highlight=callback
+    def __init__(self) -> None:
+        super().__init__()
+        self.data["F"] = []
+        self.data["X"] = []
 
-def run_nsga_one_step(problem, pop_size, do_init= False, init_solution= None):
-
-    for i in range(num_times):
-        # print("Running for seed {:2d}".format(i))
-
-        if do_init:
-            # Reference
-            # https://pymoo.org/customization/initialization.html?highlight=population%20nsga2
-            if type(init_solution) == np.ndarray and init_solution.ndim == 2:
-                init_data_curr = init_solution
-            elif isinstance(init_solution, list):
-                init_data_curr = init_solution[i]
-            else:
-                raise NotImplementedError
-
-            algorithm= NSGA2(pop_size = pop_size,
-                          crossover= SimulatedBinaryCrossover(eta= eta_c, prob= p_c),
-                          mutation = PolynomialMutation      (eta= eta_m, prob= p_m),
-                          eliminate_duplicates=True,
-                          sampling = init_data_curr)
-        else:
-            algorithm= NSGA2(pop_size = pop_size,
-                          crossover= SimulatedBinaryCrossover(eta= eta_c, prob= p_c),
-                          mutation = PolynomialMutation      (eta= eta_m, prob= p_m),
-                          eliminate_duplicates=True)
-
-        res     = minimize(problem,
-                           algorithm,
-                           ('n_gen', 1),
-                           seed= i,
-                           verbose= False)
-
-        func = res.F
-        sol  = res.X
-
-        # Combine all sets of solutions
-        if i == 0:
-            func_all_seed = []#np.zeros((num_times, func.shape[0], func.shape[1]))
-            sol_all_seed  = []#np.zeros((num_times, sol.shape[0], sol.shape[1]))
-        func_all_seed.append(func)
-        sol_all_seed.append(sol)
-
-    func_all_seed_appended = list_to_append_array(func_all_seed)
-    sol_all_seed_appended  = list_to_append_array(sol_all_seed)
-
-    # Get non-dominated points
-    func_non_dominated, sol_non_dominated = get_non_dominated_points(func_all_seed_appended, sol_all_seed_appended, verbose= False)
-
-    return func_all_seed, sol_all_seed, func_non_dominated, sol_non_dominated
-
+    def notify(self, algorithm):
+        self.data["F"].append(algorithm.pop.get("F"))
+        self.data["X"].append(algorithm.pop.get("X"))
 
 def run_nsga_num_steps(problem, pareto_solution, pop_size, num_gen, do_init= False, init_solution= None):
     hv  = get_performance_indicator("hv", ref_point=np.array([1.2, 1.2]))
     igd = get_performance_indicator("igd", pareto_solution)
 
-    non_dominated_all_step = []
-    for j in range(num_gen):
-        if j == 0:
-            if do_init:
-                print("\nNSGA2 with weighted sum initialization...")
-            else:
-                print("\nNSGA2 with random initialization...")
+    if do_init:
+        print("\nWeighted-sum Initialization...")
+        algorithm= NSGA2(pop_size = pop_size,
+                     crossover= SimulatedBinaryCrossover(eta= eta_c, prob= p_c),
+                     mutation = PolynomialMutation      (eta= eta_m, prob= p_m),
+                     eliminate_duplicates=True,
+                     sampling = init_solution
+                     )
+    else:
+        print("\nRandom Initialization...")
+        algorithm= NSGA2(pop_size = pop_size,
+                         crossover= SimulatedBinaryCrossover(eta= eta_c, prob= p_c),
+                         mutation = PolynomialMutation      (eta= eta_m, prob= p_m),
+                         eliminate_duplicates=True
+                         )
 
-            func_all_seed, sol_all_seed, func_non_dominated, sol_non_dominated = run_nsga_one_step(problem, pop_size, do_init= do_init, init_solution= init_solution)
-        else:
-            func_all_seed, sol_all_seed, func_non_dominated, sol_non_dominated = run_nsga_one_step(problem, pop_size, do_init= do_init, init_solution= sol_all_seed)
+    func_all_seed_all_gen = []
+    sol_all_seed_all_gen = []
+    for i in range(num_seeds):
+        res      = minimize(problem,
+                            algorithm,
+                            ('n_gen', num_gen),
+                            seed= i,
+                            callback=MyCallback(),
+                            verbose= False)
+        func_all_seed_all_gen.append(res.algorithm.callback.data["F"])
+        sol_all_seed_all_gen.append(res.algorithm.callback.data["X"])
+
+    for i in range(num_gen):
+        func_all_seed = []
+        sol_all_seed  = []
+        for j in range(num_seeds):
+            func_all_seed.append(func_all_seed_all_gen[j][i])
+            sol_all_seed.append (sol_all_seed_all_gen [j][i])
+
+        func_all_seed_appended = list_to_append_array(func_all_seed)
+        sol_all_seed_appended  = list_to_append_array(sol_all_seed)
+
+        # Get non-dominated points
+        func_non_dominated, sol_non_dominated = get_non_dominated_points(func_all_seed_appended, sol_all_seed_appended, verbose= False)
 
         # Print some statistics
         hv_val  = hv.do(func_non_dominated)
         igd_val = igd.do(sol_non_dominated)
-        print("Gen= {:2d} HV= {:.2f} IGD= {:.2f}".format(j+1, hv_val, igd_val))
+        print("Gen= {:2d} HV= {:.2f} IGD= {:.2f}".format(i+1, hv_val, igd_val))
 
-        non_dominated_all_step.append(sol_non_dominated)
+        if i % 10 == 0 or i == num_gen-1:
+            t = problem.evaluate(sol_non_dominated)
+            plt.scatter(t[:,0], t[:,1]);
+            plt.show()
+            plt.close()
 
 # ==================================================================================================
 # Main Starts here
@@ -123,17 +113,17 @@ parser.add_argument('--problem_name', type= str, default= 'FON',
 parser.add_argument('--dim', type= int, default= 2,
                     help='dimensions of the problem')
 
-parser.add_argument('--num_gen', type=int, default=5,
-                    help='number of generations (default: 20)')
-parser.add_argument('--num_times', type=int, default=10,
-                    help='num of times (default: 10)')
+parser.add_argument('--num_gen', type=int, default=50,
+                    help='number of generations (default: 50)')
+parser.add_argument('--num_seeds', type=int, default=5,
+                    help='num of seeds (default: 5)')
 parser.add_argument('--pop_size', type=int, default=100,
                     help='population size (default: 100)')
 args     = parser.parse_args()
 problem_name  = args.problem_name
 dim      = args.dim
 num_gen  = args.num_gen
-num_times= args.num_times
+num_seeds= args.num_seeds
 pop_size = args.pop_size
 
 # Print the arguments
@@ -141,17 +131,25 @@ print("==================================")
 print("Problem  = {}".format(problem_name))
 print("Dim      = {}".format(dim))
 print("Num_gen  = {}".format(num_gen))
-print("Num times= {}".format(num_times))
+print("Num seeds= {}".format(num_seeds))
 print("Pop size = {}".format(pop_size))
 print("==================================\n")
 
 # Start executing main
-if problem_name == "ZDT4":
+if problem_name == "ZDT1":
+    problem  = ZDT1(n_var= dim)
+    init_solution   = read_mat("matlab/ZDT1_" + str(dim) + '.mat')['x_init_matrix']
+    temp     = np.arange(0, 1, 0.01)
+    pareto_solution       = np.zeros((temp.shape[0], dim))
+    pareto_solution[:, 0] = temp
+
+elif problem_name == "ZDT4":
     problem  = ZDT4(n_var= dim)
     init_solution   = read_mat("matlab/ZDT4_" + str(dim) + '.mat')['x_init_matrix']
     temp     = np.arange(0, 1, 0.01)
     pareto_solution       = np.zeros((temp.shape[0], dim))
     pareto_solution[:, 0] = temp
+
 
 elif problem_name == "FON":
     problem  = FON(n_var= dim)
@@ -167,8 +165,6 @@ if pop_size < num_init_sol:
     # downsample
     delta = num_init_sol // pop_size
     init_solution = init_solution[::delta]
-
-# print(pareto_solution.shape)
 
 # Run without initialization
 run_nsga_num_steps(problem, pareto_solution, pop_size, num_gen, do_init= False, init_solution= None)

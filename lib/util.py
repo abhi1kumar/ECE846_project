@@ -16,6 +16,13 @@ def read_mat(file_path):
 
     return mat_contents
 
+def list_to_append_array(mylist):
+    num_times = len(mylist)
+    appended_arr = mylist[0]
+    for i in range(1, num_times):
+        appended_arr = np.vstack((appended_arr, mylist[i]))
+
+    return appended_arr
 
 def get_non_dominated_points(func_data, x_data, verbose= False):
     if verbose:

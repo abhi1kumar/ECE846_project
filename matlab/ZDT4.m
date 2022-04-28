@@ -1,4 +1,4 @@
-function x_init_matrix = FON(num_init, N, d, options)
+function x_init_matrix = ZDT4(num_init, N, d, options)
 
     % Create weight matrix
     weight_matrix = zeros(num_init, 2);
@@ -12,7 +12,7 @@ function x_init_matrix = FON(num_init, N, d, options)
     Aeq = [];
     beq = [];
     
-    lb  = -1.0* ones(1,d);
+    lb  =  0.0* ones(1,d);
     ub  =  1.0* ones(1,d);
     x_init_matrix = zeros(num_init, d);
     
@@ -20,7 +20,7 @@ function x_init_matrix = FON(num_init, N, d, options)
     for k = 1:num_init
         weight = weight_matrix(k,:);
     
-        objective = @(x)FON_objective(x,weight,d);
+        objective = @(x)ZDT4_objective(x,weight,d);
         constraint= @constraint_empty;
         
         f_min = 10000;
@@ -35,6 +35,6 @@ function x_init_matrix = FON(num_init, N, d, options)
         x_init_matrix(k,:) = x_min;
     end
 
-    save_filename = strcat('FON_', int2str(d), '.mat');
+    save_filename = strcat('ZDT4_', int2str(d), '.mat');
     save(save_filename, 'x_init_matrix')
 end
